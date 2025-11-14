@@ -35,7 +35,7 @@ jobs:
             IdentityFile ~/.ssh/id_rsa
           EOF
           
-          cat cat > ~/.ssh/config
+          cat ~/.ssh/config
           
           # Теперь используем более простую команду
           ssh k8s-node "kubectl get pods -A --field-selector=status.phase!=Running" > failing_pods.txt
