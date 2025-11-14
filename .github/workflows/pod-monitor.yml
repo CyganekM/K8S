@@ -43,7 +43,7 @@ Failed pods detected:
   fi
   
   - name: Cleanup
-if: always()
-run: |
-  rm -f ~/.ssh/id_rsa
-  rm -f failing_pods.txt
+    if: always()
+    run: |
+      rm -f ~/.ssh/id_rsa
+      rm -f failing_pods.txt
