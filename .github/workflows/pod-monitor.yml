@@ -2,48 +2,39 @@ name: Pod Monitor with Telegram Alerts
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Каждые 5 минут
-  workflow_dispatch:        # Ручной запуск
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 jobs:
   check-pods:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check Kubernetes pods via bastion
+      - name: Setup SSH and check pods
         run: |
-          # Создаем SSH ключ
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Проверяем Pods через bastion
           ssh -o StrictHostKeyChecking=no \
               -i ~/.ssh/id_rsa \
               -J ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }}:${{ secrets.BASTION_PORT }} \
               ${{ secrets.K8S_NODE_USER }}@${{ secrets.K8S_NODE }} \
-              "kubectl get pods --all-namespaces --field-selector=status.phase!=Running" > failing_pods.txt
+              "kubectl get pods -A --field-selector=status.phase!=Running" > failing_pods.txt
 
-      - name: Check for failing pods and send alert
+      - name: Send Telegram alert
         run: |
           if [ -s failing_pods.txt ]; then
             FAILING_PODS=$(cat failing_pods.txt)
-            MESSAGE="❌ K8s Pod Alert: 
+            curl -s -X POST \
+              "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+              -d "text=❌ K8s Pod Alert: Failed pods detected: $FAILING_PODS"
+          else
+            echo "All pods healthy"
+          fi
 
-Failed pods detected:
-
-  ${FAILING_PODS}"
-  
-  curl -s -X POST \
-  "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-  -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-  -d "text=$MESSAGE"
-  else
-  echo "✅ All pods are running normally"
-  fi
-  
-  - name: Cleanup
-    if: always()
-    run: |
-      rm -f ~/.ssh/id_rsa
-      rm -f failing_pods.txt
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_rsa failing_pods.txt
