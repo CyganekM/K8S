@@ -35,9 +35,6 @@ jobs:
             IdentityFile ~/.ssh/id_rsa
           EOF
           
-          cat ~/.ssh/config
-          
-          # Теперь используем более простую команду
           ssh k8s-node "kubectl get pods -A --field-selector=status.phase!=Running" > failing_pods.txt
 
       - name: Send Telegram alert
@@ -49,7 +46,9 @@ jobs:
               -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
               -d "text=❌ K8s Pod Alert: Failed pods detected: $FAILING_PODS"
           else
-            echo "All pods healthy"
+           "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+              -d "text=✅ K8s Cluster Healthy: All pods running at $(date +'%Y-%m-%d %H:%M:%S')"
           fi
 
       - name: Cleanup
