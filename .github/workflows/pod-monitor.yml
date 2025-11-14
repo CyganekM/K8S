@@ -16,11 +16,29 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          ssh -o StrictHostKeyChecking=no \
-              -i ~/.ssh/id_rsa \
-              -J ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }}:${{ secrets.BASTION_PORT }} \
-              ${{ secrets.K8S_NODE_USER }}@${{ secrets.K8S_NODE }} \
-              "kubectl get pods -A --field-selector=status.phase!=Running" > failing_pods.txt
+          # Создаем SSH config файл
+          cat > ~/.ssh/config << EOF
+          Host bastion
+            HostName ${{ secrets.BASTION_HOST }}
+            User ${{ secrets.BASTION_USER }}
+            Port ${{ secrets.BASTION_PORT }}
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            IdentityFile ~/.ssh/id_rsa
+          
+          Host k8s-node
+            HostName ${{ secrets.K8S_NODE }}
+            User ${{ secrets.K8S_NODE_USER }}
+            ProxyJump bastion
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            IdentityFile ~/.ssh/id_rsa
+          EOF
+          
+          cat cat > ~/.ssh/config
+          
+          # Теперь используем более простую команду
+          ssh k8s-node "kubectl get pods -A --field-selector=status.phase!=Running" > failing_pods.txt
 
       - name: Send Telegram alert
         run: |
