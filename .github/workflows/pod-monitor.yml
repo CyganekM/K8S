@@ -45,9 +45,10 @@ jobs:
               -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
               -d "text=❌ K8s Pod Alert: Failed pods detected: $FAILING_PODS"
           else
-            curl -s -X "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            ccurl -s -X POST \
+              "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
               -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-              -d "text=✅ K8s Cluster Healthy: All pods running at $(date +'%Y-%m-%d %H:%M:%S')"
+              -d "chattext=✅ K8s Cluster Healthy: All pods running at $(date +'%Y-%m-%d %H:%M:%S')"
           fi
 
       - name: Cleanup
